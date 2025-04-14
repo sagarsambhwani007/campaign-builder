@@ -51,3 +51,7 @@ assets/
 # Virtual environment
 venv/
 ENV/
+
+# SSH keys
+ssh_key*
+*.pub
