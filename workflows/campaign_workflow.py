@@ -5,12 +5,15 @@ from agents import AGENT_REGISTRY
 def build_campaign_workflow():
     workflow = StateGraph(CampaignState)
 
-    # Add all nodes from the registry
-    for name, func in AGENT_REGISTRY.items():
+    # Filter out the send_campaign_emails agent from the workflow
+    workflow_nodes = {k:v for k,v in AGENT_REGISTRY.items() if k != "send_campaign_emails"}
+    
+    # Add remaining nodes
+    for name, func in workflow_nodes.items():
         workflow.add_node(name, func)
     
     # Create the workflow sequence
-    nodes = list(AGENT_REGISTRY.keys())
+    nodes = list(workflow_nodes.keys())
     for i in range(len(nodes) - 1):
         workflow.add_edge(nodes[i], nodes[i+1])
 

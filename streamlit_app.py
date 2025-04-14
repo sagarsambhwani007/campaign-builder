@@ -11,7 +11,7 @@ from core.vector_db import initialize_vector_db, load_documents_by_domain
 from core.state import CampaignState
 from workflows.campaign_workflow import build_campaign_workflow
 from fpdf import FPDF
-from utils.send_emails import send_campaign_emails
+
 
 # Load environment variables
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -363,18 +363,18 @@ def main():
                     # Store the final state in session state for later use
                     st.session_state.state = initial_state
 
-                # Update the email sending section
-                with tabs[6]:  # Changed from tabs[7] to tabs[6]
+                # In the email distribution tab section:
+                with tabs[6]:
                     st.subheader("Campaign Distribution")
                     
-                    # Show who will receive emails (from filtered_customers.csv)
+                    # Show who will receive emails
                     customer_data_path = os.path.join(script_dir, 'data', 'filtered_customers.csv')
                     try:
                         customer_data = pd.read_csv(customer_data_path)
                         valid_emails = customer_data[customer_data['email'].notna()]
                         
                         st.markdown("### Recipients")
-                        st.dataframe(valid_emails[['full_name', 'email']].head(2), 
+                        st.dataframe(valid_emails[['full_name', 'email']].head(10),
                                    column_config={
                                        "full_name": "Name",
                                        "email": "Email"
@@ -382,21 +382,25 @@ def main():
                         
                         if len(valid_emails) > 10:
                             st.caption(f"Showing first 10 of {len(valid_emails)} recipients")
+                            
+                        # Manual email sending button
+                        if st.button("📧 Send Campaign Emails", key="send_emails_button"):
+                            with st.spinner("Sending emails to customers..."):
+                                if hasattr(st.session_state.state, 'campaign_strategy'):
+                                    # Call send_campaign_emails directly
+                                    updated_state = send_campaign_emails(st.session_state.state)
+                                    st.session_state.state = updated_state
+                                    
+                                    if "Email Campaign Summary" in updated_state.email_status:
+                                        st.success("✅ Emails sent successfully!")
+                                        st.markdown(updated_state.email_status)
+                                    else:
+                                        st.error(updated_state.email_status)
+                                else:
+                                    st.error("Campaign not fully generated yet")
+                                    
                     except FileNotFoundError:
                         st.warning("No customer data found. Please ensure filtered_customers.csv exists in the data directory.")
-                    
-                    if st.button("📧 Send Campaign Emails"):
-                        with st.spinner("Sending emails to customers..."):
-                            # Use the actual email sending function
-                            updated_state = send_campaign_emails(st.session_state.state)
-                            st.session_state.state = updated_state
-                            
-                            # Display results
-                            if "Email Campaign Summary" in updated_state.email_status:
-                                st.success("Emails sent successfully!")
-                                st.markdown(updated_state.email_status)
-                            else:
-                                st.error(updated_state.email_status)
 
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
